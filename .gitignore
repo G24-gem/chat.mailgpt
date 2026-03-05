@@ -1,0 +1,4 @@
+node_modules/
+.env
+public/media/*
+!public/media/.gitkeep
