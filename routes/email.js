@@ -10,7 +10,7 @@ const nodemailer = require('nodemailer');
   },
 });*/
 
-const transporter = nodemailer.createTransport({
+/*const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
@@ -19,6 +19,16 @@ const transporter = nodemailer.createTransport({
     user: process.env.SENDER_EMAIL,
     pass: process.env.SENDER_APP_PASSWORD,
   },
+});*/
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.sendgrid.net",
+  port: 587,
+  secure: false,
+  auth: {
+    user: "apikey",
+    pass: process.env.SENDGRID_API_KEY
+  }
 });
 
 router.post('/send', async (req, res) => {
