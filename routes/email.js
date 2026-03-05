@@ -1,59 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-/*const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SENDER_EMAIL,
-    pass: process.env.SENDER_APP_PASSWORD,
-  },
-});*/
-
-/*const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  connectionTimeout: 10000,
-  auth: {
-    user: process.env.SENDER_EMAIL,
-    pass: process.env.SENDER_APP_PASSWORD,
-  },
-});*/
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.sendgrid.net",
-  port: 587,
-  secure: false,
-  auth: {
-    user: "apikey",
-    pass: process.env.SENDGRID_API_KEY
-  }
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/send', async (req, res) => {
   const { to, subject, html } = req.body;
+
   if (!to || !subject || !html) {
     return res.status(400).json({ error: 'Missing required fields: to, subject, html' });
   }
+
   try {
-    const info = await transporter.sendMail({
+    const [response] = await sgMail.send({
       from: `"MailGPT" <${process.env.SENDER_EMAIL}>`,
       to,
       subject,
       html,
     });
-    res.json({ success: true, messageId: info.messageId });
+
+    res.json({ success: true, statusCode: response.statusCode });
   } catch (err) {
-    console.error('Send error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Send error:', err?.response?.body || err.message);
+    res.status(500).json({ error: err?.response?.body?.errors || err.message });
   }
 });
 
 router.get('/verify', async (req, res) => {
   try {
-    await transporter.verify();
-    res.json({ success: true });
+    // SendGrid HTTP API has no verify() — check key is set instead
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY is not set');
+    }
+    res.json({ success: true, message: 'API key is configured' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
