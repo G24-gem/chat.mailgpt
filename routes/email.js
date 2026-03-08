@@ -28,8 +28,13 @@ router.post('/send', async (req, res) => {
 
     res.json({ success: true, statusCode: response.statusCode });
   } catch (err) {
-    console.error('Send error:', err?.response?.body || err.message);
-    res.status(500).json({ error: err?.response?.body?.errors || err.message });
+    const sgErrors = err?.response?.body?.errors;
+    const errorMessage = sgErrors
+      ? sgErrors.map(e => e.message).join(', ')
+      : err.message;
+
+    console.error('Send error:', errorMessage);
+    res.status(500).json({ error: errorMessage });
   }
 });
 
