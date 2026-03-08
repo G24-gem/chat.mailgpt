@@ -2,7 +2,14 @@ const express = require('express');
 const router = express.Router();
 const sgMail = require('@sendgrid/mail');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const apiKey = process.env.SENDGRID_API_KEY?.trim();
+
+if (!apiKey) {
+  console.error('SENDGRID_API_KEY is not set or is empty');
+  process.exit(1); // or handle gracefully
+}
+
+sgMail.setApiKey(apiKey);
 
 router.post('/send', async (req, res) => {
   const { to, subject, html } = req.body;
