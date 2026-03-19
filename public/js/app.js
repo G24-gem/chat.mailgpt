@@ -1,3 +1,4 @@
+/*./public/js/application.js*/
 /* ============================== MailGPT Frontend App ============================== */
 const App = (() => {
   // State
