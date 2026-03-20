@@ -1,44 +1,151 @@
-/*./public/js/application.js*/
+/*./public/js/app.js*/
 /* ============================== MailGPT Frontend App ============================== */
 const App = (() => {
-  // State
+  // ── State ──────────────────────────────────────────────────────────────────
   let currentSessionId = null;
-  let sessions = [];
-  let uploadedFiles = [];
+  let sessions         = [];
+  let uploadedFiles    = [];
   let currentHtmlEmail = null;
-  let isLoading = false;
+  let isLoading        = false;
+  let currentUser      = null;   // populated after /auth/me
 
-  // DOM helpers
+  // ── DOM helpers ─────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   const els = {
-    sidebar: $('sidebar'),
-    sidebarOverlay: $('sidebarOverlay'),
-    menuToggle: $('menuToggle'),
-    newChatBtn: $('newChatBtn'),
-    searchInput: $('searchInput'),
-    sessionsList: $('sessionsList'),
-    topbarTitle: $('topbarTitle'),
-    clearBtn: $('clearBtn'),
-    chatArea: $('chatArea'),
-    welcomeScreen: $('welcomeScreen'),
-    messagesContainer: $('messagesContainer'),
-    recipientInput: $('recipientInput'),
-    subjectInput: $('subjectInput'),
-    mediaStrip: $('mediaStrip'),
-    messageInput: $('messageInput'),
-    fileInput: $('fileInput'),
-    sendBtn: $('sendBtn'),
-    sendModal: $('sendModal'),
-    modalClose: $('modalClose'),
-    modalCancelBtn: $('modalCancelBtn'),
-    modalSendBtn: $('modalSendBtn'),
-    modalTo: $('modalTo'),
-    modalSubject: $('modalSubject'),
-    modalPreview: $('modalPreview'),
-    toast: $('toast'),
+    sidebar:          $('sidebar'),
+    sidebarOverlay:   $('sidebarOverlay'),
+    menuToggle:       $('menuToggle'),
+    newChatBtn:       $('newChatBtn'),
+    searchInput:      $('searchInput'),
+    sessionsList:     $('sessionsList'),
+    topbarTitle:      $('topbarTitle'),
+    clearBtn:         $('clearBtn'),
+    chatArea:         $('chatArea'),
+    welcomeScreen:    $('welcomeScreen'),
+    welcomeHeading:   $('welcomeHeading'),
+    welcomeSubtitle:  $('welcomeSubtitle'),
+    loginPrompt:      $('loginPrompt'),
+    messagesContainer:$('messagesContainer'),
+    recipientInput:   $('recipientInput'),
+    subjectInput:     $('subjectInput'),
+    mediaStrip:       $('mediaStrip'),
+    messageInput:     $('messageInput'),
+    fileInput:        $('fileInput'),
+    sendBtn:          $('sendBtn'),
+    sendModal:        $('sendModal'),
+    modalClose:       $('modalClose'),
+    modalCancelBtn:   $('modalCancelBtn'),
+    modalSendBtn:     $('modalSendBtn'),
+    modalTo:          $('modalTo'),
+    modalSubject:     $('modalSubject'),
+    modalPreview:     $('modalPreview'),
+    modalFromText:    $('modalFromText'),
+    toast:            $('toast'),
+    // Auth
+    loginBtn:         $('loginBtn'),
+    userPill:         $('userPill'),
+    userAvatar:       $('userAvatar'),
+    userGreeting:     $('userGreeting'),
+    userDropdown:     $('userDropdown'),
+    dropdownAvatar:   $('dropdownAvatar'),
+    dropdownName:     $('dropdownName'),
+    dropdownEmail:    $('dropdownEmail'),
   };
 
-  /* ---- Sidebar ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     AUTH
+  ════════════════════════════════════════════════════════════════════════════ */
+
+  async function fetchUser() {
+    try {
+      const res  = await fetch('/auth/me', { credentials: 'include' });
+      const data = await res.json();
+      currentUser = data.user || null;
+    } catch {
+      currentUser = null;
+    }
+    updateAuthUI();
+    handleAuthCallback();
+  }
+
+  function updateAuthUI() {
+    if (currentUser) {
+      // ── Logged IN ───────────────────────────────────────────────────────
+      els.loginBtn.style.display  = 'none';
+      els.userPill.style.display  = 'flex';
+      els.loginPrompt.style.display = 'none';
+
+      const first = currentUser.firstName || currentUser.displayName.split(' ')[0] || 'there';
+
+      // Topbar pill
+      if (currentUser.avatar) {
+        els.userAvatar.src         = currentUser.avatar;
+        els.dropdownAvatar.src     = currentUser.avatar;
+      }
+      els.userGreeting.textContent = `Hello, ${first}`;
+      els.dropdownName.textContent  = currentUser.displayName;
+      els.dropdownEmail.textContent = currentUser.email;
+
+      // Welcome screen heading
+      els.welcomeHeading.innerHTML =
+        `Hello <em>${first}</em>, compose with <em>intelligence</em>`;
+
+      // Pre-fill From field in send modal
+      els.modalFromText.textContent = `${currentUser.displayName} <${currentUser.email}>`;
+    } else {
+      // ── Logged OUT ──────────────────────────────────────────────────────
+      els.loginBtn.style.display  = 'flex';
+      els.userPill.style.display  = 'none';
+      els.loginPrompt.style.display = 'block';
+
+      els.welcomeHeading.innerHTML = `Compose with <em>intelligence</em>`;
+      els.modalFromText.textContent = '— login required —';
+    }
+  }
+
+  // Show a toast based on ?auth= query param after OAuth redirect
+  function handleAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('auth');
+    if (status === 'success') {
+      showToast(`Welcome, ${currentUser?.firstName || 'freelancer'}! 🎉`, 'success');
+      history.replaceState(null, '', window.location.pathname);
+    } else if (status === 'failed') {
+      showToast('Google login failed. Please try again.', 'error');
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  // Toggle user dropdown open/close
+  function initUserPillToggle() {
+    els.userPill.addEventListener('click', (e) => {
+      if (e.target.closest('.user-dropdown')) return;   // clicks inside dropdown don't close it
+      els.userPill.classList.toggle('open');
+    });
+    // Close when clicking elsewhere
+    document.addEventListener('click', e => {
+      if (!els.userPill.contains(e.target)) {
+        els.userPill.classList.remove('open');
+      }
+    });
+  }
+
+  function login() {
+    window.location.href = '/auth/google';
+  }
+
+  async function logout() {
+    try {
+      await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {}
+    currentUser = null;
+    updateAuthUI();
+    showToast('Signed out. See you soon!');
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     SIDEBAR
+  ════════════════════════════════════════════════════════════════════════════ */
   function initSidebar() {
     els.menuToggle.addEventListener('click', toggleSidebar);
     els.sidebarOverlay.addEventListener('click', closeSidebar);
@@ -53,14 +160,14 @@ const App = (() => {
     els.sidebarOverlay.classList.remove('show');
   }
 
-  /* ---- LocalStorage ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     LOCAL STORAGE
+  ════════════════════════════════════════════════════════════════════════════ */
   function saveToLocalStorage() {
     try {
       localStorage.setItem('mailgpt_sessions', JSON.stringify(sessions));
       localStorage.setItem('mailgpt_current', currentSessionId || '');
-    } catch(e) {
-      console.log('LocalStorage save failed:', e.message);
-    }
+    } catch(e) { console.log('LocalStorage save failed:', e.message); }
   }
 
   function loadFromLocalStorage() {
@@ -68,15 +175,9 @@ const App = (() => {
       const saved = localStorage.getItem('mailgpt_sessions');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) {
-          sessions = parsed;
-          renderSessions();
-          return true;
-        }
+        if (parsed && parsed.length > 0) { sessions = parsed; renderSessions(); return true; }
       }
-    } catch(e) {
-      console.log('LocalStorage load failed:', e.message);
-    }
+    } catch(e) { console.log('LocalStorage load failed:', e.message); }
     return false;
   }
 
@@ -87,13 +188,15 @@ const App = (() => {
     } catch { return null; }
   }
 
-  /* ---- Sessions ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     SESSIONS
+  ════════════════════════════════════════════════════════════════════════════ */
   async function loadSessions() {
     const hadLocal = loadFromLocalStorage();
     if (!hadLocal) {
       try {
         const res = await fetch('/api/chat/sessions');
-        sessions = await res.json();
+        sessions  = await res.json();
         renderSessions();
         saveToLocalStorage();
       } catch {}
@@ -101,7 +204,7 @@ const App = (() => {
   }
 
   function renderSessions(filter = '') {
-    const f = filter.toLowerCase();
+    const f    = filter.toLowerCase();
     const list = f ? sessions.filter(s => s.title.toLowerCase().includes(f)) : sessions;
     if (!list.length) {
       els.sessionsList.innerHTML = `<div class="sessions-empty">No emails yet.<br>Start composing!</div>`;
@@ -119,30 +222,26 @@ const App = (() => {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button class="session-del" onclick="App.deleteSession(event,'${s.id}')" title="Delete">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>`).join('');
   }
 
-  /* ---- Session Rename ---- */
+  /* ── Session rename ──────────────────────────────────────────────────── */
   function startRename(e, id) {
     e.stopPropagation();
-    const item = e.target.closest('.session-item');
-    const titleEl = item.querySelector('.session-title');
+    const item         = e.target.closest('.session-item');
+    const titleEl      = item.querySelector('.session-title');
     const currentTitle = sessions.find(s => s.id === id)?.title || '';
 
-    // Swap title text for an input
     titleEl.innerHTML = '';
     const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentTitle;
+    input.type      = 'text';
+    input.value     = currentTitle;
     input.className = 'session-rename-input';
     titleEl.appendChild(input);
-    input.focus();
-    input.select();
+    input.focus(); input.select();
 
     function commitRename() {
       const newTitle = input.value.trim() || currentTitle;
@@ -157,24 +256,22 @@ const App = (() => {
 
     input.addEventListener('blur', commitRename);
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
       if (e.key === 'Escape') { input.value = currentTitle; input.blur(); }
     });
   }
 
   async function newSession() {
     try {
-      const res = await fetch('/api/chat/sessions', { method: 'POST' });
-      const s = await res.json();
+      const res  = await fetch('/api/chat/sessions', { method: 'POST' });
+      const s    = await res.json();
       currentSessionId = s.id;
       sessions.unshift({ id: s.id, title: 'New Email', preview: '', messages: [], createdAt: Date.now(), updatedAt: Date.now() });
-      renderSessions();
-      saveToLocalStorage();
+      renderSessions(); saveToLocalStorage();
       clearChatUI();
       els.topbarTitle.textContent = 'New Email';
-      els.clearBtn.style.display = 'none';
-      uploadedFiles = [];
-      renderMediaStrip();
+      els.clearBtn.style.display  = 'none';
+      uploadedFiles = []; renderMediaStrip();
       currentHtmlEmail = null;
     } catch { showToast('Could not create session', 'error'); }
   }
@@ -182,8 +279,7 @@ const App = (() => {
   async function switchSession(id) {
     if (id === currentSessionId) { closeSidebar(); return; }
     currentSessionId = id;
-    closeSidebar();
-    renderSessions();
+    closeSidebar(); renderSessions();
     try {
       const localSession = getLocalSession(id);
       let session;
@@ -191,7 +287,7 @@ const App = (() => {
         session = localSession;
       } else {
         const res = await fetch(`/api/chat/sessions/${id}`);
-        session = await res.json();
+        session   = await res.json();
       }
       clearChatUI();
       els.topbarTitle.textContent = session.title || 'Email';
@@ -218,19 +314,18 @@ const App = (() => {
       await fetch(`/api/chat/sessions/${id}`, { method: 'DELETE' });
       sessions = sessions.filter(s => s.id !== id);
       if (currentSessionId === id) {
-        currentSessionId = null;
-        clearChatUI();
-        showWelcome();
+        currentSessionId = null; clearChatUI(); showWelcome();
         els.topbarTitle.textContent = 'MailGPT';
-        els.clearBtn.style.display = 'none';
+        els.clearBtn.style.display  = 'none';
         currentHtmlEmail = null;
       }
-      renderSessions();
-      saveToLocalStorage();
+      renderSessions(); saveToLocalStorage();
     } catch { showToast('Delete failed', 'error'); }
   }
 
-  /* ---- File Upload ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     FILE UPLOAD
+  ════════════════════════════════════════════════════════════════════════════ */
   function initFileUpload() {
     els.fileInput.addEventListener('change', async e => {
       const files = Array.from(e.target.files);
@@ -239,15 +334,10 @@ const App = (() => {
       const fd = new FormData();
       files.forEach(f => fd.append('files', f));
       try {
-        const res = await fetch('/api/media/upload', { method: 'POST', body: fd });
+        const res  = await fetch('/api/media/upload', { method: 'POST', body: fd });
         const data = await res.json();
-        if (data.success) {
-          uploadedFiles.push(...data.files);
-          renderMediaStrip();
-          showToast('Files ready!', 'success');
-        } else {
-          showToast(data.error || 'Upload failed', 'error');
-        }
+        if (data.success) { uploadedFiles.push(...data.files); renderMediaStrip(); showToast('Files ready!', 'success'); }
+        else { showToast(data.error || 'Upload failed', 'error'); }
       } catch { showToast('Upload failed', 'error'); }
       e.target.value = '';
     });
@@ -256,8 +346,8 @@ const App = (() => {
   function renderMediaStrip() {
     if (!uploadedFiles.length) { els.mediaStrip.innerHTML = ''; return; }
     els.mediaStrip.innerHTML = uploadedFiles.map((f, i) => {
-      const isImg = f.mimetype && f.mimetype.startsWith('image/');
-      const thumb = isImg
+      const isImg  = f.mimetype && f.mimetype.startsWith('image/');
+      const thumb  = isImg
         ? `<img src="${f.url}" class="media-chip-thumb" alt="${htmlEsc(f.originalName)}">`
         : `<div class="media-chip-icon">${fileIcon(f.mimetype)}</div>`;
       return `<div class="media-chip">
@@ -272,13 +362,15 @@ const App = (() => {
 
   function removeFile(i) { uploadedFiles.splice(i, 1); renderMediaStrip(); }
   function fileIcon(m = '') {
-    if (m.startsWith('video/')) return '🎥';
-    if (m.startsWith('image/')) return '🖼';
-    if (m.includes('pdf')) return '📄';
+    if (m.startsWith('video/'))  return '🎥';
+    if (m.startsWith('image/'))  return '🖼';
+    if (m.includes('pdf'))       return '📄';
     return '📎';
   }
 
-  /* ---- Textarea ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     TEXTAREA
+  ════════════════════════════════════════════════════════════════════════════ */
   function initTextarea() {
     const ta = els.messageInput;
     ta.addEventListener('input', () => {
@@ -291,31 +383,33 @@ const App = (() => {
     els.sendBtn.addEventListener('click', sendMessage);
   }
 
-  /* ---- Send ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     SEND MESSAGE (AI generation — no auth required)
+  ════════════════════════════════════════════════════════════════════════════ */
   async function sendMessage() {
     const text = els.messageInput.value.trim();
     if (!text && uploadedFiles.length === 0) return;
     if (isLoading) return;
     if (!currentSessionId) await newSession();
-    const recipient = els.recipientInput.value.trim();
-    const subject = els.subjectInput.value.trim();
-    const files = [...uploadedFiles];
-    const message = text;
-    els.messageInput.value = '';
+
+    const recipient  = els.recipientInput.value.trim();
+    const subject    = els.subjectInput.value.trim();
+    const files      = [...uploadedFiles];
+    const message    = text;
+
+    els.messageInput.value  = '';
     els.messageInput.style.height = 'auto';
-    uploadedFiles = [];
-    renderMediaStrip();
-    showChat();
-    els.clearBtn.style.display = 'flex';
+    uploadedFiles = []; renderMediaStrip();
+    showChat(); els.clearBtn.style.display = 'flex';
     appendMessage('user', message, files);
     const thinking = appendThinking();
-    isLoading = true;
-    els.sendBtn.disabled = true;
+    isLoading = true; els.sendBtn.disabled = true;
+
     try {
-      const res = await fetch('/api/chat/message', {
-        method: 'POST',
+      const res  = await fetch('/api/chat/message', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: currentSessionId, message, mediaFiles: files, recipientEmail: recipient, emailSubject: subject }),
+        body:    JSON.stringify({ sessionId: currentSessionId, message, mediaFiles: files, recipientEmail: recipient, emailSubject: subject }),
       });
       const data = await res.json();
       thinking.remove();
@@ -325,10 +419,13 @@ const App = (() => {
         currentSessionId = data.sessionId;
         appendAIMessage(data.message, data.htmlEmail);
         if (data.htmlEmail) currentHtmlEmail = data.htmlEmail;
+
         const aiStoredContent = data.message +
           (data.htmlEmail ? '\n---HTML_EMAIL_START---\n' + data.htmlEmail + '\n---HTML_EMAIL_END---' : '');
-        const idx = sessions.findIndex(s => s.id === data.sessionId);
+
+        const idx   = sessions.findIndex(s => s.id === data.sessionId);
         const entry = { id: data.sessionId, title: data.sessionTitle || 'Email', preview: message.slice(0,60), updatedAt: Date.now(), createdAt: Date.now() };
+
         if (idx >= 0) {
           sessions[idx] = { ...sessions[idx], ...entry, messages: [...(sessions[idx].messages || []), { role: 'user', content: message }, { role: 'assistant', content: aiStoredContent }] };
         } else {
@@ -336,21 +433,22 @@ const App = (() => {
         }
         sessions.sort((a,b) => b.updatedAt - a.updatedAt);
         els.topbarTitle.textContent = data.sessionTitle || els.topbarTitle.textContent;
-        renderSessions();
-        saveToLocalStorage();
+        renderSessions(); saveToLocalStorage();
       }
     } catch (err) {
       thinking.remove();
       appendAIMessage(`Connection error: ${err.message}`, null);
     }
-    isLoading = false;
-    els.sendBtn.disabled = false;
+
+    isLoading = false; els.sendBtn.disabled = false;
     scrollBottom();
   }
 
-  /* ---- Chat UI ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     CHAT UI
+  ════════════════════════════════════════════════════════════════════════════ */
   function showWelcome() { els.welcomeScreen.style.display = 'flex'; els.messagesContainer.innerHTML = ''; }
-  function showChat() { els.welcomeScreen.style.display = 'none'; }
+  function showChat()    { els.welcomeScreen.style.display = 'none'; }
   function clearChatUI() { els.messagesContainer.innerHTML = ''; els.welcomeScreen.style.display = 'flex'; currentHtmlEmail = null; }
 
   function appendMessage(role, content, mediaFiles = []) {
@@ -359,11 +457,16 @@ const App = (() => {
     const mediaHtml = mediaFiles.filter(f => f.mimetype && f.mimetype.startsWith('image/')).map(f =>
       `<img src="${f.url}" class="media-thumb" alt="${htmlEsc(f.originalName)}">`
     ).join('');
+    // For user avatar: show Google profile pic if available
+    const userAvatarHtml = (role === 'user' && currentUser?.avatar)
+      ? `<img src="${currentUser.avatar}" style="width:30px;height:30px;border-radius:8px;object-fit:cover;" alt="You">`
+      : (role === 'user' ? '👤' : '✉');
+
     g.innerHTML = `
       <div class="message-row ${role}">
-        <div class="message-avatar ${role}">${role === 'user' ? '👤' : '✉'}</div>
+        <div class="message-avatar ${role}">${role === 'user' ? userAvatarHtml : '✉'}</div>
         <div class="message-content">
-          <div class="message-name">${role === 'user' ? 'You' : 'MailGPT'}</div>
+          <div class="message-name">${role === 'user' ? (currentUser?.firstName || 'You') : 'MailGPT'}</div>
           ${mediaHtml ? `<div class="message-media">${mediaHtml}</div>` : ''}
           <div class="message-text">${htmlEsc(content)}</div>
         </div>
@@ -462,12 +565,13 @@ const App = (() => {
     requestAnimationFrame(() => { els.chatArea.scrollTop = els.chatArea.scrollHeight; });
   }
 
-  /* ---- Email Block Actions ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     EMAIL BLOCK ACTIONS
+  ════════════════════════════════════════════════════════════════════════════ */
   function getHtmlFromBlock(el) {
     const block = el.closest('.html-email-block');
     return decodeURIComponent(escape(atob(block.dataset.html)));
   }
-
   function setHtmlOnBlock(block, html) {
     block.dataset.html = btoa(unescape(encodeURIComponent(html)));
     const pre = block.querySelector('.code-view pre');
@@ -485,24 +589,24 @@ const App = (() => {
   }
 
   function toggleCode(btn) {
-    const block = btn.closest('.html-email-block');
-    const codeView = block.querySelector('.code-view');
+    const block     = btn.closest('.html-email-block');
+    const codeView  = block.querySelector('.code-view');
     const iframeWrap = block.querySelector('.email-iframe-wrap');
-    const showing = codeView.style.display !== 'none';
+    const showing   = codeView.style.display !== 'none';
     if (showing) {
-      codeView.style.display = 'none';
-      iframeWrap.style.display = 'block';
+      codeView.style.display    = 'none';
+      iframeWrap.style.display  = 'block';
       btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Source`;
     } else {
-      codeView.style.display = 'block';
-      iframeWrap.style.display = 'none';
+      codeView.style.display    = 'block';
+      iframeWrap.style.display  = 'none';
       btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Preview`;
     }
   }
 
   function toggleExpand(btn) {
-    const block = btn.closest('.html-email-block');
-    const iframe = block.querySelector('.email-iframe');
+    const block   = btn.closest('.html-email-block');
+    const iframe  = block.querySelector('.email-iframe');
     const expanded = btn.dataset.expanded === 'true';
     if (expanded) {
       iframe.style.height = '400px';
@@ -518,10 +622,12 @@ const App = (() => {
     }
   }
 
-  /* ---- Live HTML Editor ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     LIVE HTML EDITOR
+  ════════════════════════════════════════════════════════════════════════════ */
   function openEditor(btn) {
     const block = btn.closest('.html-email-block');
-    const html = getHtmlFromBlock(btn);
+    const html  = getHtmlFromBlock(btn);
 
     const backdrop = document.createElement('div');
     backdrop.className = 'editor-backdrop';
@@ -565,21 +671,19 @@ const App = (() => {
     requestAnimationFrame(() => backdrop.classList.add('visible'));
 
     const textarea = backdrop.querySelector('#editorTextarea');
-    const iframe = backdrop.querySelector('#editorIframe');
+    const iframe   = backdrop.querySelector('#editorIframe');
     const applyBtn = backdrop.querySelector('#editorApplyBtn');
-    const copyBtn = backdrop.querySelector('#editorCopyBtn');
+    const copyBtn  = backdrop.querySelector('#editorCopyBtn');
     const closeBtn = backdrop.querySelector('#editorCloseBtn');
 
     iframe.srcdoc = html;
 
-    // Live preview debounced
     let debounceTimer;
     textarea.addEventListener('input', () => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => { iframe.srcdoc = textarea.value; }, 400);
     });
 
-    // Tab support
     textarea.addEventListener('keydown', e => {
       if (e.key === 'Tab') {
         e.preventDefault();
@@ -587,10 +691,9 @@ const App = (() => {
         textarea.value = textarea.value.slice(0, s) + '  ' + textarea.value.slice(end);
         textarea.selectionStart = textarea.selectionEnd = s + 2;
       }
-      if (e.key === 'Escape') closeEditor(backdrop);
+      if (e.key === 'Escape') closeEditorModal(backdrop);
     });
 
-    // Apply changes back to chat block
     applyBtn.addEventListener('click', () => {
       const newHtml = textarea.value;
       setHtmlOnBlock(block, newHtml);
@@ -598,7 +701,7 @@ const App = (() => {
       if (chatIframe) chatIframe.srcdoc = newHtml;
       currentHtmlEmail = newHtml;
       showToast('Changes applied!', 'success');
-      closeEditor(backdrop);
+      closeEditorModal(backdrop);
     });
 
     copyBtn.addEventListener('click', () => {
@@ -608,61 +711,98 @@ const App = (() => {
       });
     });
 
-    closeBtn.addEventListener('click', () => closeEditor(backdrop));
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeEditor(backdrop); });
+    closeBtn.addEventListener('click', () => closeEditorModal(backdrop));
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeEditorModal(backdrop); });
   }
 
-  function closeEditor(backdrop) {
+  function closeEditorModal(backdrop) {
     backdrop.classList.remove('visible');
     setTimeout(() => backdrop.remove(), 220);
   }
 
-  /* ---- Send Modal ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     SEND MODAL  (requires auth — sends via Gmail API)
+  ════════════════════════════════════════════════════════════════════════════ */
   function openSendModal(btn) {
+    // Gate: must be logged in
+    if (!currentUser) {
+      showToast('Please login with Google to send emails', 'error');
+      els.loginBtn.classList.add('pulse-once');
+      setTimeout(() => els.loginBtn.classList.remove('pulse-once'), 600);
+      return;
+    }
+
     const html = getHtmlFromBlock(btn);
-    els.modalTo.value = els.recipientInput.value;
+    els.modalTo.value      = els.recipientInput.value;
     els.modalSubject.value = els.subjectInput.value;
-    els.sendModal._html = html;
+    els.sendModal._html    = html;
+
+    // Show From
+    els.modalFromText.textContent = `${currentUser.displayName} <${currentUser.email}>`;
+
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'width:100%;border:none;height:250px;display:block;';
     iframe.sandbox = 'allow-same-origin';
     els.modalPreview.innerHTML = '';
     els.modalPreview.appendChild(iframe);
     iframe.srcdoc = html;
+
     els.sendModal.style.display = 'flex';
   }
 
-  /* ---- Modal ---- */
   function initModal() {
     els.modalClose.addEventListener('click', closeModal);
     els.modalCancelBtn.addEventListener('click', closeModal);
     els.sendModal.addEventListener('click', e => { if (e.target === els.sendModal) closeModal(); });
+
     els.modalSendBtn.addEventListener('click', async () => {
-      const to = els.modalTo.value.trim();
+      if (!currentUser) {
+        showToast('Please login with Google first', 'error');
+        closeModal();
+        return;
+      }
+
+      const to      = els.modalTo.value.trim();
       const subject = els.modalSubject.value.trim();
-      const html = els.sendModal._html;
-      if (!to) { showToast('Please enter a recipient', 'error'); return; }
-      if (!subject) { showToast('Please enter a subject', 'error'); return; }
-      els.modalSendBtn.disabled = true;
-      els.modalSendBtn.textContent = 'Sending…';
+      const html    = els.sendModal._html;
+
+      if (!to)      { showToast('Please enter a recipient', 'error');  return; }
+      if (!subject) { showToast('Please enter a subject',   'error');  return; }
+
+      els.modalSendBtn.disabled     = true;
+      els.modalSendBtn.textContent  = 'Sending…';
+
       try {
-        const res = await fetch('/api/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to, subject, html }),
+        const res  = await fetch('/api/email/send', {
+          method:      'POST',
+          credentials: 'include',
+          headers:     { 'Content-Type': 'application/json' },
+          body:        JSON.stringify({ to, subject, html }),
         });
         const data = await res.json();
-        if (data.success) { showToast(`Sent to ${to}! 🎉`, 'success'); closeModal(); }
-        else { showToast(data.error || 'Failed to send', 'error'); }
+
+        if (data.success) {
+          showToast(`Sent to ${to}! 🎉`, 'success');
+          closeModal();
+        } else if (data.relogin) {
+          showToast('Session expired — please login again', 'error');
+          closeModal();
+          setTimeout(() => window.location.href = '/auth/google', 1200);
+        } else {
+          showToast(data.error || 'Failed to send', 'error');
+        }
       } catch { showToast('Send failed', 'error'); }
-      els.modalSendBtn.disabled = false;
+
+      els.modalSendBtn.disabled  = false;
       els.modalSendBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/></svg> Send Email`;
     });
   }
 
   function closeModal() { els.sendModal.style.display = 'none'; }
 
-  /* ---- Clear btn ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     MISC
+  ════════════════════════════════════════════════════════════════════════════ */
   function initClearBtn() {
     els.clearBtn.addEventListener('click', async () => {
       if (!currentSessionId) return;
@@ -671,12 +811,10 @@ const App = (() => {
     });
   }
 
-  /* ---- Search ---- */
   function initSearch() {
     els.searchInput.addEventListener('input', e => renderSessions(e.target.value));
   }
 
-  /* ---- Examples ---- */
   function useExample(btn) {
     const span = btn.querySelectorAll('span')[1];
     const text = span ? span.textContent : btn.textContent;
@@ -685,13 +823,12 @@ const App = (() => {
     els.messageInput.dispatchEvent(new Event('input'));
   }
 
-  /* ---- Parse AI ---- */
   function parseAI(content) {
     const S = '---HTML_EMAIL_START---', E = '---HTML_EMAIL_END---';
     let msg = content, html = null;
     if (content.includes(S)) {
       const si = content.indexOf(S), ei = content.indexOf(E);
-      msg = content.slice(0, si).trim();
+      msg  = content.slice(0, si).trim();
       html = (ei > si ? content.slice(si + S.length, ei) : content.slice(si + S.length)).trim();
     } else {
       const m = content.match(/```html\n?([\s\S]*?)```/i);
@@ -700,32 +837,40 @@ const App = (() => {
     return { msg, html };
   }
 
-  /* ---- Toast ---- */
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
   let toastTimer;
   function showToast(msg, type = '') {
     clearTimeout(toastTimer);
     els.toast.textContent = msg;
-    els.toast.className = `toast show${type ? ' ' + type : ''}`;
+    els.toast.className   = `toast show${type ? ' ' + type : ''}`;
     toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3000);
   }
 
-  /* ---- HTML escape ---- */
+  /* ── HTML escape ─────────────────────────────────────────────────────────── */
   function htmlEsc(str = '') {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  /* ---- Init ---- */
+  /* ════════════════════════════════════════════════════════════════════════════
+     INIT
+  ════════════════════════════════════════════════════════════════════════════ */
   function init() {
     initSidebar();
+    initUserPillToggle();
     initFileUpload();
     initTextarea();
     initModal();
     initClearBtn();
     initSearch();
     loadSessions();
+    fetchUser();   // ← loads auth state on every page load
   }
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { useExample, switchSession, deleteSession, removeFile, copyHtml, toggleCode, toggleExpand, openSendModal, openEditor, startRename, showToast };
+  return {
+    useExample, switchSession, deleteSession, removeFile,
+    copyHtml, toggleCode, toggleExpand, openSendModal, openEditor, startRename,
+    showToast, login, logout,
+  };
 })();
