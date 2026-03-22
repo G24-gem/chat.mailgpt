@@ -1,0 +1,27 @@
+MAILGPT — SYSTEM DOCUMENTATION & USER GUIDE (V1.0)
+
+1. PRODUCT OVERVIEW
+MailGPT is an autonomous AI ecosystem for freelancers. It doesn't just write emails; it manages the entire sales lifecycle from cold-pitching to closing and follow-ups.
+
+2. CORE FEATURES
+- Autonomous Gmail Poller: Scans your inbox every 60 seconds (requires gmail.readonly scope).
+- Reply Detection: When a client replies, the poller identifies the thread, analyzes the client's intent, and generates a suggested AI response analysis for the user.
+- 24-Hour Follow-Up: If a client doesn't reply to a proposal within 24 hours, the system automatically triggers a follow-up email suggestion in the dashboard.
+- Multimodal Vision: (Optional) Analyze images or videos to include visual context in your emails.
+- AI Interviewer: Instead of just guessing, the AI Agent interviews the user to gather specific project details (Budget, Timeline, Deliverables).
+
+3. USER WORKFLOW
+- Step 1: Pick an Email Type (Cold Pitch, Proposal, Follow-Up, Client Update).
+- Step 2: Complete the AI Interview. The assistant will ask clarifying questions.
+- Step 3: Review the Generated HTML Email and Send.
+- Step 4: Monitor the "Notifications" bell. A blue dot indicates a client reply has been autonomousley analyzed.
+
+4. TECHNICAL DETAILS
+- Database: MongoDB is the Source of Truth for all sessions and messages.
+- AI Models: Primarily uses nvidia/nemotron or similar via OpenRouter for high-speed conversational intelligence.
+- Security: OAuth 2.0 via Google. Access is restricted to gmail.send and gmail.readonly.
+
+5. TROUBLESHOOTING
+- "No new replies": The poller only identifies replies to threads started through MailGPT.
+- "G icon on AI messages": Fixed locally to use the MailGPT Bot branding.
+- "Outdated screen": The app now uses a True-Sync mechanism to bypass the local cache and show the real-time MongoDB state.

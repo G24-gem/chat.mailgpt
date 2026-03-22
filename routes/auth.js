@@ -1,19 +1,21 @@
 /* ./routes/auth.js */
-const express  = require('express');
+const express = require('express');
 const passport = require('passport');
-const router   = express.Router();
+const router = express.Router();
 
 // ── Kick off Google OAuth ──────────────────────────────────────────────────
-// Requesting gmail.send so the user's own Gmail account sends the email.
+// gmail.send    → send emails from the user's account
+// gmail.readonly → read threads so the poller can detect client replies
 // accessType:'offline' + prompt:'consent' guarantees a refresh_token every time.
 router.get('/google', passport.authenticate('google', {
   scope: [
     'profile',
     'email',
     'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.readonly',
   ],
   accessType: 'offline',
-  prompt:     'consent',
+  prompt: 'consent',
 }));
 
 // ── OAuth callback ─────────────────────────────────────────────────────────

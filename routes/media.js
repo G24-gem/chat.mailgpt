@@ -37,6 +37,7 @@ router.post('/upload', upload.array('files', 10), (req, res) => {
       mimetype: f.mimetype,
       size: f.size,
     }));
+    console.log("Files uploaded successfully");
     res.json({ success: true, files });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -47,6 +48,7 @@ router.delete('/:filename', (req, res) => {
   const filePath = path.join(mediaDir, req.params.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
+    console.log("File deleted successfully")
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'File not found' });

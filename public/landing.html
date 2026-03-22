@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailGPT | The Freelancer's Autonomous Closer</title>
+    <link rel="stylesheet" href="/css/landing.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        .consultant-hero {
+            padding: 4rem 10%;
+            background: var(--glass);
+            border-radius: 40px;
+            border: 1px solid var(--border);
+            margin: 6rem 5% 0;
+        }
+
+        .nav-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .grid-consultant {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .consultant-card i {
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .how-it-works {
+            padding: 8rem 5%;
+            text-align: center;
+        }
+
+        .step-grid {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            flex-wrap: wrap;
+            margin-top: 4rem;
+        }
+
+        .step {
+            width: 280px;
+            position: relative;
+        }
+
+        .step-num {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            margin: 0 auto 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="logo">
+            <img src="/favicon.svg" alt="MailGPT Logo" style="width:32px; height:32px; border-radius:8px;">
+            MailGPT
+        </div>
+        <!-- Mobile Toggle -->
+        <button class="mobile-toggle" id="mobileToggle"
+            style="display:none; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/#how">How it Works</a></li>
+            <li><a href="/#about">About</a></li>
+            <li><a href="/consultant.html">AI Consultant</a></li>
+        </ul>
+        <a href="/auth/google" class="btn-primary">Get Started</a>
+    </nav>
+
+    <script>
+        const toggle = document.getElementById('mobileToggle');
+        const links = document.getElementById('navLinks');
+        toggle.onclick = () => {
+            links.style.display = links.style.display === 'flex' ? 'none' : 'flex';
+            links.style.flexDirection = 'column';
+            links.style.position = 'absolute';
+            links.style.top = '70px';
+            links.style.left = '0';
+            links.style.width = '100%';
+            links.style.background = 'rgba(15, 23, 42, 0.95)';
+            links.style.padding = '2rem';
+            links.style.gap = '1.5rem';
+        };
+    </script>
+
+    <header class="hero">
+        <h1>Win more clients <br> while you <span>sleep</span>.</h1>
+        <p>MailGPT is your autonomous sales assistant. It interviews you, researches your clients, and writes
+            high-conversion emails that get you paid faster. No more blank-page syndrome.</p>
+        <div style="display: flex; gap: 1rem;">
+            <a href="/auth/google" class="btn-primary" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Launch
+                Workspace</a>
+            <a href="#how" class="btn-primary"
+                style="background: var(--glass); border: 1px solid var(--border); box-shadow: none;">See How it
+                Works</a>
+        </div>
+    </header>
+
+    <section id="how" class="how-it-works">
+        <h2 style="font-size: 3rem; margin-bottom: 1rem;">The Autonomous Workflow</h2>
+        <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 4rem;">From the first pitch to the final
+            payment, MailGPT handles the heavy lifting.</p>
+
+        <div class="step-grid">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>The Interview</h3>
+                <p style="color: var(--text-muted); padding-top: 1rem;">The AI Agent interviews you to gather project
+                    specifics, mission goals, and pricing.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Autonomous Polling</h3>
+                <p style="color: var(--text-muted); padding-top: 1rem;">We scan for replies 24/7. When a client
+                    responds, the AI triggers an analysis immediately.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>High-ROI Generation</h3>
+                <p style="color: var(--text-muted); padding-top: 1rem;">Get ready-to-send HTML emails optimized for
+                    conversion and professional impact.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="consultant" class="consultant-hero">
+        <h2 style="font-size: 2.5rem; text-align: center; margin-bottom: 1rem;">AI Consultant Guide</h2>
+        <p style="text-align: center; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem;">Not sure where
+            to start? Our consultant guide helps you unlock the full power of autonomous selling.</p>
+
+        <div class="grid-consultant">
+            <div class="consultant-card">
+                <h3>🚀 Landing the Pitch</h3>
+                <p style="color: var(--text-muted); margin-top: 1rem;">Use the <b>Cold Pitch</b> engine. Tip: Provide a
+                    social link of the prospect; the AI will enrich the pitch with relevant business data.</p>
+            </div>
+            <div class="consultant-card">
+                <h3>💰 Closing the Deal</h3>
+                <p style="color: var(--text-muted); margin-top: 1rem;">The <b>Proposal</b> engine builds structured
+                    agreements. Ensure you mention timeline and deliverables for the sharpest results.</p>
+            </div>
+            <div class="consultant-card">
+                <h3>🔄 Ghosting Prevention</h3>
+                <p style="color: var(--text-muted); margin-top: 1rem;">Sent an email but got no reply? Our 24-hour
+                    poller automatically suggests a warm follow-up if the client is silent.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" style="padding: 8rem 10%; text-align: center;">
+        <h2 style="font-size: 2.5rem; margin-bottom: 2rem;">Designed for the Modern Freelancer</h2>
+        <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 800px; margin: 0 auto; line-height: 2;">We
+            built MailGPT because selling shouldn't be the hardest part of being a creator. By combining autonomous
+            Gmail polling with state-of-the-art LLMs, we've created a co-pilot that works as hard as you do to close
+            deals and grow your business.</p>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 MailGPT. All rights reserved. <br> Built for creators, by creators.</p>
+    </footer>
+
+</body>
+
+</html>

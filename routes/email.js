@@ -1,8 +1,8 @@
 /* ./routes/email.js */
-const express      = require('express');
-const { google }   = require('googleapis');
+const express = require('express');
+const { google } = require('googleapis');
 const { requireAuth } = require('../middleware/auth');
-const router       = express.Router();
+const router = express.Router();
 
 // ── Build an authenticated Gmail client for the logged-in user ─────────────
 function gmailClient(user) {
@@ -12,7 +12,7 @@ function gmailClient(user) {
     process.env.GOOGLE_CALLBACK_URL,
   );
   auth.setCredentials({
-    access_token:  user.accessToken,
+    access_token: user.accessToken,
     refresh_token: user.refreshToken,
   });
   return google.gmail({ version: 'v1', auth });
@@ -39,7 +39,7 @@ function encodeMessage(from, displayName, to, subject, html) {
 
 // ── POST /api/email/send ───────────────────────────────────────────────────
 router.post('/send', requireAuth, async (req, res) => {
-  const { to, subject, html } = req.body;
+  const { to, subject, html, sessionId } = req.body;
 
   if (!to || !subject || !html) {
     return res.status(400).json({ error: 'Missing required fields: to, subject, html' });
@@ -47,22 +47,34 @@ router.post('/send', requireAuth, async (req, res) => {
 
   try {
     const gmail = gmailClient(req.user);
-    const raw   = encodeMessage(req.user.email, req.user.displayName || req.user.firstName, to, subject, html);
+    const raw = encodeMessage(req.user.email, req.user.displayName || req.user.firstName, to, subject, html);
 
     const result = await gmail.users.messages.send({
-      userId:      'me',
+      userId: 'me',
       requestBody: { raw },
     });
 
-    res.json({ success: true, messageId: result.data.id });
+    // Track sent state for AI Agent Follow-ups
+    if (sessionId) {
+      const Session = require('../models/Session');
+      await Session.findByIdAndUpdate(sessionId, {
+        gmailThreadId: result.data.threadId,
+        phase: 'sent_awaiting_reply',
+        sentAt: new Date(),
+        updatedAt: Date.now()
+      });
+      console.log(`[AGENT] Session ${sessionId} marked as sent_awaiting_reply (Thread: ${result.data.threadId})`);
+    }
+
+    res.json({ success: true, messageId: result.data.id, threadId: result.data.threadId });
   } catch (err) {
     console.error('Gmail send error:', err.response?.data || err.message);
 
     // Token expired → ask the frontend to re-authenticate
     if (err.code === 401 || err.status === 401) {
       return res.status(401).json({
-        error:    'Gmail token expired. Please login again.',
-        relogin:  true,
+        error: 'Gmail token expired. Please login again.',
+        relogin: true,
         loginUrl: '/auth/google',
       });
     }
@@ -74,7 +86,7 @@ router.post('/send', requireAuth, async (req, res) => {
 // ── GET /api/email/verify — sanity-check that tokens work ─────────────────
 router.get('/verify', requireAuth, async (req, res) => {
   try {
-    const gmail   = gmailClient(req.user);
+    const gmail = gmailClient(req.user);
     const profile = await gmail.users.getProfile({ userId: 'me' });
     res.json({ success: true, email: profile.data.emailAddress });
   } catch (err) {
