@@ -15,6 +15,7 @@ const User = require('./models/User');
 const { connectDB } = require('./utils/db');
 
 const app = express();
+app.set('trust proxy', 1); 
 const PORT = process.env.PORT || 3000;
 
 // ── 1. Connect MongoDB ─────────────────────────────────────────────────────
@@ -52,10 +53,11 @@ app.use(session({
     autoRemove: 'native',
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  },
+  secure: process.env.NODE_ENV === 'production',
+  httpOnly: true,
+  sameSite: 'lax', // ← ADD THIS
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+},
 }));
 
 // ── 5. Passport — Google OAuth2 ───────────────────────────────────────────
