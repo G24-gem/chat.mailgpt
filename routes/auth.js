@@ -3,10 +3,6 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 
-// ── Kick off Google OAuth ──────────────────────────────────────────────────
-// gmail.send    → send emails from the user's account
-// gmail.readonly → read threads so the poller can detect client replies
-// accessType:'offline' + prompt:'consent' guarantees a refresh_token every time.
 router.get('/google', passport.authenticate('google', {
   scope: [
     'profile',
@@ -18,20 +14,25 @@ router.get('/google', passport.authenticate('google', {
   prompt: 'consent',
 }));
 
-// ── OAuth callback ─────────────────────────────────────────────────────────
 router.get(
   '/google/callback',
   passport.authenticate('google', { failureRedirect: '/?auth=failed' }),
-  (req, res) => res.redirect('/?auth=success'),
+  (req, res) => {
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error after OAuth:', err);
+        return res.redirect('/?auth=failed');
+      }
+      res.redirect('/?auth=success');
+    });
+  },
 );
 
-// ── Current user (JSON) ────────────────────────────────────────────────────
 router.get('/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
   res.json({ user: req.user.toSafeObject() });
 });
 
-// ── Logout ─────────────────────────────────────────────────────────────────
 router.post('/logout', (req, res) => {
   req.logout(err => {
     if (err) return res.status(500).json({ error: err.message });
