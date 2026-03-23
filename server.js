@@ -134,12 +134,17 @@ app.use('/api/consultant', require('./routes/consultant'));
 
 // ── 8. Root & SPA Gateway ──────────────────────────────────────────────────
 app.get('/', (req, res) => {
+  console.log('--- / HIT ---');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', JSON.stringify(req.session));
+  console.log('isAuthenticated:', req.isAuthenticated());
+  console.log('req.user:', req.user);
+
   if (req.isAuthenticated && req.isAuthenticated()) {
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
-
 // Everyone can access the AI Consultant
 app.get('/consultant.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'consultant.html'));
